@@ -3,46 +3,39 @@ import curses
 import random
 
 from fire import fire
-from ship import print_ship
+from ship import animate_ship
 from stars import blink
+from load_frames import get_frames_from_files
 
 
 SYMBOLS = ['*', ':', '+', '.']
 TIC_TIMEOUT = 0.1
 
 
-with open("rocket_frame_1.txt", "r") as f:
-    frame1 = f.read()
-
-
-with open("rocket_frame_2.txt", "r") as f:
-    frame2 = f.read()
-
-
 def draw(canvas):
     coroutines = []
-    row, column = canvas.getmaxyx()
+    height, width = canvas.getmaxyx()
     curses.curs_set(False)
-    bang = fire(canvas, row / 2, column / 2)
-    ships = print_ship(canvas, row / 2, column / 2, (frame1, frame2))
-    coroutines.append(bang)
-    coroutines.append(ships)
+    ship_frames = get_frames_from_files(('rocket_frame_1.txt', 'rocket_frame_2.txt'))
+    coroutine_bang = fire(canvas, height / 2, width / 2)
+    coroutine_ship = animate_ship(canvas, height / 2, width / 2, ship_frames)
+    coroutines.append(coroutine_bang)
+    coroutines.append(coroutine_ship)
+    border_size = 1
 
     for _ in range(100):
         symbol = random.choice(SYMBOLS)
-        y = random.randint(1, row - 1)
-        x = random.randint(1, column - 1)
-        coroutine = blink(canvas, y, x, symbol, random.randint(1, 5))
+        y_coord = random.randint(1, height - border_size)
+        x_coord = random.randint(1, width - border_size)
+        coroutine = blink(canvas, y_coord, x_coord, symbol, random.randint(1, 5))
         coroutines.append(coroutine)
-    while True:
-        for coroutine in coroutines:
+    while coroutines:
+        for coroutine in coroutines.copy():
             try:
                 coroutine.send(None)
-                canvas.refresh()
             except StopIteration:
                 coroutines.remove(coroutine)
-        if len(coroutines) == 0:
-            break
+        canvas.refresh()
         time.sleep(TIC_TIMEOUT)
 
 

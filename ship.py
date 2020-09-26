@@ -82,29 +82,28 @@ def get_frame_size(text):
     return rows, columns
 
 
-async def print_ship(canvas, row, column, frames):
-    iterator = cycle(list(frames))
+async def animate_ship(canvas, row, column, frames):
     canvas.nodelay(True)
-    y, x = (row, column)
+    preview_frame = ''
+    prev_y, prev_x = (row, column)
 
-    main_row, main_column = canvas.getmaxyx()
+    height, width = canvas.getmaxyx()
     while True:
-        item = next(iterator)
-        draw_frame(canvas, y, x, item)
-        canvas.refresh()
-        await asyncio.sleep(0)
-        draw_frame(canvas, y, x, item, negative=True)
+        for frame in frames:
+            draw_frame(canvas, prev_y, prev_x, preview_frame, negative=True)
+            draw_frame(canvas, row, column, frame)
 
-        next_row, next_column, _ = read_controls(canvas)
-        x += next_column
-        y += next_row
-        frame_rows, frame_columns = get_frame_size(item)
+            preview_frame = frame
+            prev_y, prev_x = (row, column)
+            frame_y, frame_x = get_frame_size(preview_frame)
 
-        if 0 > y:
-            y = 0.5
-        elif (y + frame_rows) > main_row:
-            y -= 1
-        if 0 > x:
-            x = 0.5
-        elif (x + frame_columns) > main_column:
-            x -= 1
+            rows_direction, columns_direction, _ = read_controls(canvas)
+
+            row += rows_direction
+            column += columns_direction
+
+            if row < 0 or row + frame_y > height:
+                row = prev_y
+            if column < 0 or column + frame_x > width:
+                column = prev_x
+            await asyncio.sleep(0)
